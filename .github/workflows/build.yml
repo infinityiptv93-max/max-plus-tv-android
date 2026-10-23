@@ -38,9 +38,32 @@ jobs:
           unzip -t MinhaIPTV_Android.zip
           unzip -q MinhaIPTV_Android.zip -d projeto
 
+      - name: Alinhar Java e Kotlin na JVM 17
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          file = Path("projeto/MinhaIPTV_Android/app/build.gradle.kts")
+          text = file.read_text()
+          marker = "    buildFeatures {"
+          if marker not in text:
+              raise SystemExit("Não encontrei buildFeatures no Gradle do módulo app")
+          if "sourceCompatibility = JavaVersion.VERSION_17" not in text:
+              block = '''    compileOptions {
+                  sourceCompatibility = JavaVersion.VERSION_17
+                  targetCompatibility = JavaVersion.VERSION_17
+              }
+              kotlinOptions {
+                  jvmTarget = "17"
+              }
+          '''
+              text = text.replace(marker, block + marker, 1)
+              file.write_text(text)
+          print("Configuração Java/Kotlin alinhada em 17")
+          PY
+
       - name: Compilar APK
         working-directory: projeto/MinhaIPTV_Android
-        run: gradle --no-daemon assembleDebug
+        run: gradle --no-daemon --stacktrace assembleDebug
 
       - name: Guardar APK
         uses: actions/upload-artifact@v4
@@ -48,4 +71,3 @@ jobs:
           name: Max-Plus-TV-debug
           path: projeto/MinhaIPTV_Android/app/build/outputs/apk/debug/app-debug.apk
           if-no-files-found: error
-
